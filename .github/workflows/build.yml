@@ -1,0 +1,63 @@
+name: "Rust-like-python — 3OS Build + SpongeVM + ProofLedger"
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rust-like-python-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: "Build — ${{ matrix.os }}"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Sponge VM
+        run: |
+          echo "Downloading Sponge VM..."
+          # 실제 Sponge VM 바이너리 배포 위치에 맞게 설정
+          python -m pip install spongevm
+
+      - name: Run Rust-like-python AST test
+        run: |
+          python src/main.py > out.txt
+
+      - name: Create dist folder
+        run: mkdir -p dist
+
+      - name: Write ProofLedger
+        run: |
+          echo "Rust-like-python Build Proof" > dist/proofledger.txt
+          echo "OS=${{ matrix.os }}" >> dist/proofledger.txt
+          echo "Commit=${{ github.sha }}" >> dist/proofledger.txt
+          echo "Timestamp=$(date)" >> dist/proofledger.txt
+          echo "Runner=${{ runner.os }}" >> dist/proofledger.txt
+
+      - name: Copy Output
+        run: |
+          cp out.txt dist/out-${{ matrix.os }}.txt
+          cp -r src dist/src-${{ matrix.os }}
+
+      - name: Archive result
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-like-python-${{ matrix.os }}
+          path: dist
