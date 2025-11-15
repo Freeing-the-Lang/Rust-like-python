@@ -30,18 +30,34 @@ jobs:
         with:
           python-version: '3.12'
 
+
+      # 🔥 Sponge VM 설치 (OS별 자동 선택)
       - name: Install Sponge VM
+        shell: bash
         run: |
           echo "Downloading Sponge VM..."
-          # 실제 Sponge VM 바이너리 배포 위치에 맞게 설정
-          python -m pip install spongevm
 
-      - name: Run Rust-like-python AST test
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            curl -L -o spongevm https://github.com/Freeing-the-Lang/Sponge-VM/releases/latest/download/spongevm-linux
+            chmod +x spongevm
+
+          elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            curl -L -o spongevm https://github.com/Freeing-the-Lang/Sponge-VM/releases/latest/download/spongevm-macos
+            chmod +x spongevm
+
+          else
+            curl -L -o spongevm.exe https://github.com/Freeing-the-Lang/Sponge-VM/releases/latest/download/spongevm-windows.exe
+          fi
+
+
+      - name: Run Rust-like-python using Sponge VM
         run: |
           python src/main.py > out.txt
 
+
       - name: Create dist folder
         run: mkdir -p dist
+
 
       - name: Write ProofLedger
         run: |
@@ -51,10 +67,12 @@ jobs:
           echo "Timestamp=$(date)" >> dist/proofledger.txt
           echo "Runner=${{ runner.os }}" >> dist/proofledger.txt
 
+
       - name: Copy Output
         run: |
           cp out.txt dist/out-${{ matrix.os }}.txt
-          cp -r src dist/src-${{ matrix.os }}
+          cp -r src dist/src-${{ matrix.os }}/
+
 
       - name: Archive result
         uses: actions/upload-artifact@v4
